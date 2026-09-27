@@ -17,7 +17,7 @@ def json_serial(obj):
 
 #TODO: status as enum
 def add(description: str, status: str) -> None:
-    new_task = {"id": 2, "description": description, "status": status, "created_at": current_date, "updated_at": current_date}
+    new_task = {"id": 1, "description": description, "status": status, "created_at": current_date, "updated_at": current_date}
 
     if not os.path.exists(file_path):
         json_content = {"tasks": [new_task]}
@@ -59,8 +59,25 @@ def update(id: int, new_description=None, new_status=None) -> str:
     return f"Task {id} updated successfully."
 
 
-def delete(id: int):
-    return 0
+def delete(id: int) -> str:
+    if not os.path.exists(file_path):
+        return "Error: File path not found."
+    
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+
+    tasks = data.get("tasks", [])
+    updated_tasks = [task for task in tasks if task["id"] != int(id)]
+
+    if len(tasks) == len(updated_tasks):
+        return f"Error: Task with id: {id} not found."
+
+    data["tasks"] = updated_tasks
+
+    with open(file_path, 'w') as f:
+        json.dump(data, f, indent=4, default=json_serial)
+
+    return f"Task {id} successfully deleted."
 
 def list_tasks() -> str:
     with open(file_path, 'r') as f:
@@ -85,6 +102,10 @@ update_parser.add_argument("-d", "--description", type=str, default=None, metava
 update_parser.add_argument("-s", "--status", type=str, default=None, metavar="STATUS", help="New task status.")
 update_parser.set_defaults(func=update)
 
+delete_parser = subparsers.add_parser("delete", help="Delete a task.")
+delete_parser.add_argument("id", type=int, help="Id of the task.")
+delete_parser.set_defaults(func=delete)
+
 list_parser = subparsers.add_parser("list", help="List all JSON tasks.")
 list_parser.set_defaults(func=list_tasks)
 
@@ -94,6 +115,8 @@ if args.command == "add":
     print(args.func(args.description, args.status))
 elif args.command == "update":
     print(args.func(args.id, args.description, args.status))
+elif args.command == "delete":
+    print(args.func(args.id))
 elif args.command == "list":
     print(args.func())
 else:

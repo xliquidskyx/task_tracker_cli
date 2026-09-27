@@ -1,13 +1,6 @@
 {
     "tasks": [
         {
-            "id": 1,
-            "description": "Buy oat milk.",
-            "status": "in progress",
-            "created_at": "2026-09-24T14:49:17.942196",
-            "updated_at": "2026-09-27T12:25:44.490307"
-        },
-        {
             "id": 2,
             "description": "trst",
             "status": "progress",
@@ -36,11 +29,11 @@
             "updated_at": "2026-09-27T11:57:19.335999"
         },
         {
-            "id": 2,
-            "description": "trst",
-            "status": "progress",
-            "created_at": "2026-09-27T12:00:16.402902",
-            "updated_at": "2026-09-27T12:00:16.402902"
+            "id": 1,
+            "description": "Buy oat milk",
+            "status": "in progress",
+            "created_at": "2026-09-27T12:39:00.099140",
+            "updated_at": "2026-09-27T12:39:00.099140"
         }
     ]
 }
