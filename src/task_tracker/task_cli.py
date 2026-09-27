@@ -79,11 +79,18 @@ def delete(id: int) -> str:
 
     return f"Task {id} successfully deleted."
 
-def list_tasks() -> str:
+def list_tasks(status: str) -> str:
     with open(file_path, 'r') as f:
         data = json.load(f)
-        for item in data["tasks"]:
-            print(item)
+        if status:
+            for item in data["tasks"]:
+                if item["status"] == status:
+                    print(item)
+                else:
+                    continue
+        else:
+            for item in data["tasks"]:
+                print(item)
     return ""
 
 global_parser = argparse.ArgumentParser(prog="task_cli")
@@ -107,6 +114,7 @@ delete_parser.add_argument("id", type=int, help="Id of the task.")
 delete_parser.set_defaults(func=delete)
 
 list_parser = subparsers.add_parser("list", help="List all JSON tasks.")
+list_parser.add_argument("-s", "--status", type=str, default=None, metavar="STATUS", help="List tasks with given status.")
 list_parser.set_defaults(func=list_tasks)
 
 args = global_parser.parse_args()
@@ -118,6 +126,6 @@ elif args.command == "update":
 elif args.command == "delete":
     print(args.func(args.id))
 elif args.command == "list":
-    print(args.func())
+    print(args.func(args.status))
 else:
     global_parser.print_help()
