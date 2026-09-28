@@ -1,5 +1,6 @@
 import argparse
 from datetime import date, datetime
+from enum import Enum
 import os
 import json
 
@@ -7,6 +8,20 @@ import json
 file_path = "task_cli.json"
 current_date = datetime.now()
 
+class Status(Enum):
+    TODO = "todo"
+    IN_PROGRESS = "in-progress"
+    DONE = "done"
+
+    @classmethod
+    def from_string(cls, value: str):
+        # Normalize text to lowercase and replace underscores with dashes
+        normalized = value.strip().lower().replace("_", "-")
+        for item in cls:
+            if item.value == normalized:
+                return item
+        raise argparse.ArgumentTypeError(f"Invalid status value: '{value}'. Choose from: todo, in-progress, done")
+    
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
 
@@ -14,10 +29,13 @@ def json_serial(obj):
         return obj.isoformat()
     raise TypeError ("Type %s not serializable" % type(obj))
 
+def generate_id(data) -> None:
+    for i, task in enumerate(data.get("tasks", [])):
+        task["id"] = i + 1
+    return None
 
-#TODO: status as enum
-def add(description: str, status: str) -> None:
-    new_task = {"id": 1, "description": description, "status": status, "created_at": current_date, "updated_at": current_date}
+def add(description: str, status: Status) -> None:
+    new_task = {"id": 1, "description": description, "status": status.value, "created_at": current_date, "updated_at": current_date}
 
     if not os.path.exists(file_path):
         json_content = {"tasks": [new_task]}
@@ -28,9 +46,10 @@ def add(description: str, status: str) -> None:
            data = json.load(f)
            data["tasks"].append(new_task)
            f.seek(0)
+           generate_id(data)
            json.dump(data, f, indent=4, default=json_serial)
 
-    return "You have added a new task with ID X."
+    return "You have added a new task."
 
 def update(id: int, new_description=None, new_status=None) -> str:
     if not os.path.exists(file_path):
@@ -45,13 +64,15 @@ def update(id: int, new_description=None, new_status=None) -> str:
             if new_description:
                 task["description"] = new_description
             if new_status:
-                task["status"] = new_status
+                task["status"] = new_status.value
             task["updated_at"] = current_date.isoformat()
             task_found = True
             break
 
     if not task_found:
         return f"Error: Task with id: {id} not found."
+
+    generate_id(data)
 
     with open(file_path, 'w') as f:
         json.dump(data, f, indent=4, default=json_serial)
@@ -73,18 +94,19 @@ def delete(id: int) -> str:
         return f"Error: Task with id: {id} not found."
 
     data["tasks"] = updated_tasks
+    generate_id(data)
 
     with open(file_path, 'w') as f:
         json.dump(data, f, indent=4, default=json_serial)
 
     return f"Task {id} successfully deleted."
 
-def list_tasks(status: str) -> str:
+def list_tasks(status: Status) -> str:
     with open(file_path, 'r') as f:
         data = json.load(f)
         if status:
             for item in data["tasks"]:
-                if item["status"] == status:
+                if item["status"] == status.value:
                     print(item)
                 else:
                     continue
@@ -100,13 +122,13 @@ subparsers = global_parser.add_subparsers(
 
 add_parser = subparsers.add_parser("add", help="Add new task to a JSON file")
 add_parser.add_argument("description", type=str, help="The task description")
-add_parser.add_argument("status", type=str, nargs="?", default="todo", help="The initial status")
+add_parser.add_argument("status", type=Status.from_string, nargs="?", default="todo", help="The initial status")
 add_parser.set_defaults(func=add)
 
 update_parser = subparsers.add_parser("update", help="Update an existing task.")
 update_parser.add_argument("id", type=int, help="Id of the task.")
 update_parser.add_argument("-d", "--description", type=str, default=None, metavar="TEXT", help="New task description.")
-update_parser.add_argument("-s", "--status", type=str, default=None, metavar="STATUS", help="New task status.")
+update_parser.add_argument("-s", "--status", type=Status.from_string, default=None, metavar="STATUS", help="New task status.")
 update_parser.set_defaults(func=update)
 
 delete_parser = subparsers.add_parser("delete", help="Delete a task.")
@@ -114,7 +136,7 @@ delete_parser.add_argument("id", type=int, help="Id of the task.")
 delete_parser.set_defaults(func=delete)
 
 list_parser = subparsers.add_parser("list", help="List all JSON tasks.")
-list_parser.add_argument("-s", "--status", type=str, default=None, metavar="STATUS", help="List tasks with given status.")
+list_parser.add_argument("-s", "--status", type=Status.from_string, default=None, metavar="STATUS", help="List tasks with given status.")
 list_parser.set_defaults(func=list_tasks)
 
 args = global_parser.parse_args()
