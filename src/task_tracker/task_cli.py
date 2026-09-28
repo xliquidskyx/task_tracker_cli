@@ -1,119 +1,5 @@
 import argparse
-from datetime import date, datetime
-from enum import Enum
-import os
-import json
-
-
-file_path = "task_cli.json"
-current_date = datetime.now()
-
-class Status(Enum):
-    TODO = "todo"
-    IN_PROGRESS = "in-progress"
-    DONE = "done"
-
-    @classmethod
-    def from_string(cls, value: str):
-        # Normalize text to lowercase and replace underscores with dashes
-        normalized = value.strip().lower().replace("_", "-")
-        for item in cls:
-            if item.value == normalized:
-                return item
-        raise argparse.ArgumentTypeError(f"Invalid status value: '{value}'. Choose from: todo, in-progress, done")
-    
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
-
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    raise TypeError ("Type %s not serializable" % type(obj))
-
-def generate_id(data) -> None:
-    for i, task in enumerate(data.get("tasks", [])):
-        task["id"] = i + 1
-    return None
-
-def add(description: str, status: Status) -> None:
-    new_task = {"id": 1, "description": description, "status": status.value, "created_at": current_date, "updated_at": current_date}
-
-    if not os.path.exists(file_path):
-        json_content = {"tasks": [new_task]}
-        with open(file_path, 'x') as f:
-            json.dump(json_content, f, indent=4, default=json_serial)
-    else:
-       with open(file_path, 'r+') as f:
-           data = json.load(f)
-           data["tasks"].append(new_task)
-           f.seek(0)
-           generate_id(data)
-           json.dump(data, f, indent=4, default=json_serial)
-
-    return "You have added a new task."
-
-def update(id: int, new_description=None, new_status=None) -> str:
-    if not os.path.exists(file_path):
-        return "Error: No tasks file found."
-    
-    with open(file_path, 'r') as f:
-        data = json.load(f)
-
-    task_found = False
-    for task in data.get("tasks", []):
-        if task["id"] == int(id):
-            if new_description:
-                task["description"] = new_description
-            if new_status:
-                task["status"] = new_status.value
-            task["updated_at"] = current_date.isoformat()
-            task_found = True
-            break
-
-    if not task_found:
-        return f"Error: Task with id: {id} not found."
-
-    generate_id(data)
-
-    with open(file_path, 'w') as f:
-        json.dump(data, f, indent=4, default=json_serial)
-
-    return f"Task {id} updated successfully."
-
-
-def delete(id: int) -> str:
-    if not os.path.exists(file_path):
-        return "Error: File path not found."
-    
-    with open(file_path, 'r') as f:
-        data = json.load(f)
-
-    tasks = data.get("tasks", [])
-    updated_tasks = [task for task in tasks if task["id"] != int(id)]
-
-    if len(tasks) == len(updated_tasks):
-        return f"Error: Task with id: {id} not found."
-
-    data["tasks"] = updated_tasks
-    generate_id(data)
-
-    with open(file_path, 'w') as f:
-        json.dump(data, f, indent=4, default=json_serial)
-
-    return f"Task {id} successfully deleted."
-
-def list_tasks(status: Status) -> str:
-    with open(file_path, 'r') as f:
-        data = json.load(f)
-        if status:
-            for item in data["tasks"]:
-                if item["status"] == status.value:
-                    print(item)
-                else:
-                    continue
-        else:
-            for item in data["tasks"]:
-                print(item)
-    return ""
+from task_functions import Status, add, update, delete, list_tasks, mark_done, mark_in_progress
 
 global_parser = argparse.ArgumentParser(prog="task_cli")
 subparsers = global_parser.add_subparsers(
@@ -139,13 +25,21 @@ list_parser = subparsers.add_parser("list", help="List all JSON tasks.")
 list_parser.add_argument("-s", "--status", type=Status.from_string, default=None, metavar="STATUS", help="List tasks with given status.")
 list_parser.set_defaults(func=list_tasks)
 
+mark_in_progress_parser = subparsers.add_parser("mark-in-progress", help="Mark task as in progress.")
+mark_in_progress_parser.add_argument("id", type=int, help="Id of the task.")
+mark_in_progress_parser.set_defaults(func=mark_in_progress)
+
+mark_done_parser = subparsers.add_parser("mark-done", help="Mark task as done.")
+mark_done_parser.add_argument("id", type=int, help="Id of the task.")
+mark_done_parser.set_defaults(func=mark_done)
+
 args = global_parser.parse_args()
 
 if args.command == "add":
     print(args.func(args.description, args.status))
 elif args.command == "update":
     print(args.func(args.id, args.description, args.status))
-elif args.command == "delete":
+elif args.command == "delete" or args.command == "mark-in-progress" or args.command == "mark-done":
     print(args.func(args.id))
 elif args.command == "list":
     print(args.func(args.status))

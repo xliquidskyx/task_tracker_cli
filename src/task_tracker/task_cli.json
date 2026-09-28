@@ -3,7 +3,7 @@
         {
             "id": 1,
             "description": "trst",
-            "status": "progress",
+            "status": "in-progress",
             "created_at": "2026-09-24T14:57:28.980121",
             "updated_at": "2026-09-24T14:57:28.980121"
         },
@@ -23,17 +23,17 @@
         },
         {
             "id": 4,
-            "description": "new task",
-            "status": "todo",
-            "created_at": "2026-09-28T10:15:01.572441",
-            "updated_at": "2026-09-28T10:15:01.572441"
+            "description": "goodnight",
+            "status": "done",
+            "created_at": "2026-09-28T10:43:09.894090",
+            "updated_at": "2026-09-28T11:00:56.726862"
         },
         {
             "id": 5,
-            "description": "new task",
-            "status": "todo",
-            "created_at": "2026-09-28T10:15:50.019623",
-            "updated_at": "2026-09-28T10:15:50.019623"
+            "description": "and the last update",
+            "status": "in-progress",
+            "created_at": "2026-09-28T10:54:32.270217",
+            "updated_at": "2026-09-28T10:56:44.009714"
         }
     ]
 }
