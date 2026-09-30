@@ -7,11 +7,10 @@ name = "task-tracker"
 version = "0.1.0"
 description = "A simple task tracking CLI tool"
 dependencies = [
-    "typer"
 ]
 
 [project.scripts]
-tasks = "task_tracker.cli:app"
+tasks = "task_tracker.main:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

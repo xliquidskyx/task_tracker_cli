@@ -1,0 +1,4 @@
+**/__pycache__/
+task_tracker.egg-info
+venv/
+*.pyc

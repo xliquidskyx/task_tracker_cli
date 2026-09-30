@@ -1,12 +1,15 @@
 import argparse
 from datetime import date, datetime
 from enum import Enum
+from pathlib import Path
 import os
 import json
 
 
-file_path = "task_cli.json"
-current_date = datetime.now()
+FILE_PATH = Path.cwd() / "task_cli.json"
+
+class TaskError(Exception):
+    pass
 
 class Status(Enum):
     TODO = "todo"
@@ -21,170 +24,111 @@ class Status(Enum):
             if item.value == normalized:
                 return item
         raise argparse.ArgumentTypeError(f"Invalid status value: '{value}'. Choose from: todo, in-progress, done")
+
+def generate_id() -> int:
+    with open(FILE_PATH, 'r', encoding='UTF-8') as f:
+        data = json.load(f)
+    return max((task["id"] for task in data["tasks"]), default=0) + 1
+
+def load_tasks() -> list[dict]:
+    if not os.path.exists(FILE_PATH):
+        return []
+    else:
+        with open(FILE_PATH, encoding='UTF-8') as f:
+            return json.load(f).get("tasks", [])
+
+def save_tasks(tasks: list[dict]) -> None:
+    with open(FILE_PATH, 'w', encoding='UTF-8') as f:
+        json.dump({"tasks": tasks}, f, indent=4) 
+
+def add(description: str, status: Status) -> str:
+    new_id = generate_id()
+    current_date = datetime.now().isoformat()
+
+    if description.strip():
+        new_task = {"id": new_id, "description": description, "status": status.value, "createdAt": current_date, "updatedAt": current_date}
+    else:
+        raise TaskError("Task description cannot be empty.")
     
-def json_serial(obj):
-    """JSON serializer for objects not serializable by default json code"""
+    if not os.path.exists(FILE_PATH):
+        json_content = {"tasks": [new_task]}
+        with open(FILE_PATH, 'x', encoding='UTF-8') as f:
+            json.dump(json_content, f, indent=4)
+    else:
+        data = load_tasks()
+        data.append(new_task)
+        save_tasks(data)
+    return f"You have added a new task with id {new_id}."
 
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    raise TypeError ("Type %s not serializable" % type(obj))
-
-def generate_id(data) -> None:
-    for i, task in enumerate(data.get("tasks", [])):
-        task["id"] = i + 1
-    return None
-
-def add(description: str, status: Status) -> None:
-    new_task = {"id": 1, "description": description, "status": status.value, "created_at": current_date, "updated_at": current_date}
-
-    try:
-        if not os.path.exists(file_path):
-            json_content = {"tasks": [new_task]}
-            with open(file_path, 'x') as f:
-                json.dump(json_content, f, indent=4, default=json_serial)
-        else:
-            with open(file_path, 'r+') as f:
-                data = json.load(f)
-                data["tasks"].append(new_task)
-                f.seek(0)
-                generate_id(data)
-                json.dump(data, f, indent=4, default=json_serial)
-        return "You have added a new task."
-    
-    except Exception:
-        raise Exception("Couldn't add a new task. Please try again.")
-
-def update(id: int, new_description=None, new_status=None) -> str:
-    try:
-        if not os.path.exists(file_path):
-            return "Error: No tasks file found."
-        
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-
-        task_found = False
-        for task in data.get("tasks", []):
-            if task["id"] == int(id):
-                if new_description:
-                    task["description"] = new_description
-                if new_status:
-                    task["status"] = new_status.value
-                task["updated_at"] = current_date.isoformat()
+def update(id: int, description: str) -> str:
+    data = load_tasks()
+    task_found = False
+    for task in data:
+        if task["id"] == id:
+            if description != task["description"]:
+                task["description"] = description
+                task["updatedAt"] = datetime.now().isoformat()
                 task_found = True
                 break
+            else:
+                raise TaskError("There are no changes detected in the description. Update unsuccessful.")
 
-        if not task_found:
-            return f"Error: Task with id: {id} not found."
+    if not task_found:
+        raise TaskError(f"Task with id {id} not found.")
 
-        generate_id(data)
-
-        with open(file_path, 'w') as f:
-            json.dump(data, f, indent=4, default=json_serial)
-
-        return f"Task {id} updated successfully."
-
-    except Exception:
-        raise Exception("Couldn't update the task. Please, try again.")
-
+    save_tasks(data)
+    return f"Task {id} updated successfully."
 
 def delete(id: int) -> str:
-    try:
-        if not os.path.exists(file_path):
-            return "Error: File path not found."
-        
-        with open(file_path, 'r') as f:
-            data = json.load(f)
+    tasks = load_tasks()
+    updated_tasks = [task for task in tasks if task["id"] != id]
 
-        tasks = data.get("tasks", [])
-        updated_tasks = [task for task in tasks if task["id"] != int(id)]
+    if len(tasks) == len(updated_tasks):
+        raise TaskError(f"Task with id {id} not found.")
 
-        if len(tasks) == len(updated_tasks):
-            return f"Error: Task with id: {id} not found."
+    tasks = updated_tasks
+    save_tasks(tasks)
 
-        data["tasks"] = updated_tasks
-        generate_id(data)
-
-        with open(file_path, 'w') as f:
-            json.dump(data, f, indent=4, default=json_serial)
-
-        return f"Task {id} successfully deleted."
-
-    except Exception:
-        raise Exception("Couldn't delete the task. Please, try again.")
+    return f"Task {id} successfully deleted."
 
 def list_tasks(status: Status) -> str:
-    try:
-        if not os.path.exists(file_path):
-            return "Error: File path not found."
-        
-        with open(file_path, 'r') as f:
-            data = json.load(f)
-            if status:
-                for item in data["tasks"]:
-                    if item["status"] == status.value:
-                        print(item)
-                    else:
-                        continue
-            else:
-                for item in data["tasks"]:
-                    print(item)
-        return "All the tasks have been listed."
+    data = load_tasks()
 
-    except Exception:
-        raise Exception("We couldn't list the tasks. Please, try again.")
+    if len(data) == 0:
+        return TaskError("No tasks have been found.")
+    
+    if status:
+        for item in data:
+            if item["status"] == status.value:
+                print(f"[{item['id']}] {item["status"]}: {item['description']}")
+    else:
+        for item in data:
+            print(f"[{item['id']}] {item["status"]}: {item['description']}")
+    return "All the tasks have been listed."
+
+def set_status(id: int, status: Status) -> str:
+    marked = False
+    data = load_tasks()
+    for item in data:
+        if item["id"] == id:
+            if item["status"] != status.value:
+                item["status"] = status.value
+                item["updatedAt"] = datetime.now().isoformat()
+                marked = True
+                break
+            else:
+                raise TaskError(f"Task {id} already has status {status.value}.")
+    if marked:
+        save_tasks(data)
+        return f"Task with {id} marked as {status.value}."
+    else:
+        raise TaskError(f"Task with id {id} not found.")
 
 def mark_in_progress(id: int) -> str:
-    try:
-        if not os.path.exists(file_path):
-            return "Error: File path not found."
-
-        marked = False
-
-        with open(file_path, 'r+') as f:
-            data = json.load(f)
-            if id:
-                for item in data["tasks"]:
-                    if item["id"] == int(id):
-                        item["status"] = "in-progress"
-                        item["updated_at"] = current_date
-                        marked = True
-                    else:
-                        continue
-
-        if marked:
-            with open(file_path, 'w') as f:
-                json.dump(data, f, indent=4, default=json_serial)
-            return f"Task with id: {id} successfully marked as in progress."
-        else:
-            return f"Task with id: {id} not found."
-
-    except Exception:
-        raise Exception("We couldn't mark the task as in progress. Please, try again.")
+    return set_status(id, Status.IN_PROGRESS)
 
 def mark_done(id: int) -> str:
-    try:
-        if not os.path.exists:
-            return "Error: File not found"
+    return set_status(id, Status.DONE)
 
-        marked = False
-
-        with open(file_path, 'r+') as f:
-            data = json.load(f)
-            if id:
-                for item in data["tasks"]:
-                    if item["id"] == int(id):
-                        item["status"] = "done"
-                        item["updated_at"] = current_date
-                        marked = True
-                    else:
-                        continue
-
-        if marked:
-            with open(file_path, 'w') as f:
-                json.dump(data, f, indent=4, default=json_serial)
-            return f"Task with id: {id} successfuly marked as done."
-        else:
-            return f"Task with id: {id} not found."
-
-    except Exception:
-        raise Exception("We couldn't mark the task as done. Please, try again.")
+def mark_todo(id: int) -> str:
+    return set_status(id, Status.TODO)

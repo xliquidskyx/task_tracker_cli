@@ -1,0 +1,46 @@
+{
+    "tasks": [
+        {
+            "id": 1,
+            "description": "Buy oat milk.",
+            "status": "done",
+            "createdAt": "2026-09-28T10:43:09.894090",
+            "updatedAt": "2026-09-28T11:00:56.726862"
+        },
+        {
+            "id": 3,
+            "description": "Clean bathroom and kitchen",
+            "status": "done",
+            "createdAt": "2026-09-29T09:58:43.227561",
+            "updatedAt": "2026-09-29T10:16:38.022286"
+        },
+        {
+            "id": 5,
+            "description": "Buy groceries",
+            "status": "done",
+            "createdAt": "2026-09-29T11:09:41.685423",
+            "updatedAt": "2026-09-29T11:46:18.891533"
+        },
+        {
+            "id": 6,
+            "description": "Pick up medicine and groceries",
+            "status": "in-progress",
+            "createdAt": "2026-09-29T15:04:06.508272",
+            "updatedAt": "2026-09-29T15:04:36.105248"
+        },
+        {
+            "id": 7,
+            "description": "Go on a walk",
+            "status": "todo",
+            "createdAt": "2026-09-29T15:07:07.056487",
+            "updatedAt": "2026-09-29T15:22:12.156572"
+        },
+        {
+            "id": 8,
+            "description": "Prepare invoice and mail",
+            "status": "todo",
+            "createdAt": "2026-09-30T10:43:00.479800",
+            "updatedAt": "2026-09-30T10:44:27.865115"
+        }
+    ]
+}
