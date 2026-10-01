@@ -42,7 +42,7 @@ def save_tasks(tasks: list[dict]) -> None:
         json.dump({"tasks": tasks}, f, indent=4) 
 
 def add(description: str, status: Status) -> str:
-    new_id = generate_id()
+    new_id = 1
     current_date = datetime.now().isoformat()
 
     if description.strip():
@@ -56,6 +56,8 @@ def add(description: str, status: Status) -> str:
             json.dump(json_content, f, indent=4)
     else:
         data = load_tasks()
+        new_id = generate_id()
+        new_task["id"] = new_id
         data.append(new_task)
         save_tasks(data)
     return f"You have added a new task with id {new_id}."
@@ -95,7 +97,7 @@ def list_tasks(status: Status) -> str:
     data = load_tasks()
 
     if len(data) == 0:
-        return TaskError("No tasks have been found.")
+        raise TaskError("No tasks have been found.")
     
     if status:
         for item in data:
