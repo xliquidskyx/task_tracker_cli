@@ -2,3 +2,4 @@
 task_tracker.egg-info
 venv/
 *.pyc
+task_cli.json

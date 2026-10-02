@@ -76,7 +76,7 @@ class TestDelete(TaskTestCase):
         delete(2)
         self.assertEqual([task["id"] for task in self.read_tasks()], [1,3])
 
-    def test_new_id_after_delete_is_not_resued(self):
+    def test_new_id_after_delete_is_not_reused(self):
         add("A", Status.TODO)
         add("B", Status.TODO)
         add("C", Status.TODO)
@@ -89,7 +89,7 @@ class TestDelete(TaskTestCase):
         with self.assertRaises(TaskError):
             delete(2)
 
-class TaskUpdate(TaskTestCase):
+class TestUpdate(TaskTestCase):
 
     def test_changes_description_and_updated_at(self):
         add("Old", Status.TODO)
@@ -99,6 +99,11 @@ class TaskUpdate(TaskTestCase):
         self.assertEqual(after["description"], "New")
         self.assertEqual(after["createdAt"], before["createdAt"])
         self.assertNotEqual(before["updatedAt"], after["updatedAt"])
+
+    def test_empty_description_raises(self):
+        add("A", Status.TODO)
+        with self.assertRaises(TaskError):
+            update(1, " ")
 
     def test_missing_id_raises(self):
         add("A", Status.TODO)
@@ -127,6 +132,11 @@ class TestSetStatus(TaskTestCase):
         with self.assertRaises(TaskError):
             mark_done(99)
 
+    def test_same_status_raises(self):
+        add("A", Status.TODO)
+        with self.assertRaises(TaskError):
+            mark_todo(1) 
+
 class TestListTask(TaskTestCase):
 
     def run_list(self, status):
@@ -150,7 +160,7 @@ class TestListTask(TaskTestCase):
         self.assertIn("B", output)
         self.assertNotIn("A", output)
 
-    def test_empy_list_raises(self):
+    def test_empty_list_raises(self):
         with self.assertRaises(TaskError):
             list_tasks(None)
 

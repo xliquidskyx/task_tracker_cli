@@ -1,5 +1,5 @@
 import argparse
-from datetime import date, datetime
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 import os
@@ -23,48 +23,56 @@ class Status(Enum):
         for item in cls:
             if item.value == normalized:
                 return item
-        raise argparse.ArgumentTypeError(f"Invalid status value: '{value}'. Choose from: todo, in-progress, done")
-
-def generate_id() -> int:
-    with open(FILE_PATH, 'r', encoding='UTF-8') as f:
-        data = json.load(f)
-    return max((task["id"] for task in data["tasks"]), default=0) + 1
+        raise argparse.ValueError(f"Invalid status value: '{value}'. Choose from: todo, in-progress, done")
 
 def load_tasks() -> list[dict]:
     if not os.path.exists(FILE_PATH):
         return []
-    else:
-        with open(FILE_PATH, encoding='UTF-8') as f:
-            return json.load(f).get("tasks", [])
+    
+    with open(FILE_PATH, encoding='UTF-8') as f:
+        data = json.load(f)
+
+    if not isinstance(data, dict):
+        raise TaskError("Task file has invalid format.")
+
+    tasks = data.get("tasks", [])
+    if not (isinstance(tasks, list) and all(isinstance(task, dict) for task in tasks)):
+        raise TaskError("Task file has invalid format.")
+
+    return tasks
 
 def save_tasks(tasks: list[dict]) -> None:
     with open(FILE_PATH, 'w', encoding='UTF-8') as f:
-        json.dump({"tasks": tasks}, f, indent=4) 
+        json.dump({"tasks": tasks}, f, indent=4)
+
+def validate_description(description: str) -> bool:
+    if not description.strip():
+        return True
+    else:
+        return False
 
 def add(description: str, status: Status) -> str:
-    new_id = 1
     current_date = datetime.now().isoformat()
+    empty_description = validate_description(description)
 
-    if description.strip():
-        new_task = {"id": new_id, "description": description, "status": status.value, "createdAt": current_date, "updatedAt": current_date}
-    else:
+    if empty_description:
         raise TaskError("Task description cannot be empty.")
-    
-    if not os.path.exists(FILE_PATH):
-        json_content = {"tasks": [new_task]}
-        with open(FILE_PATH, 'x', encoding='UTF-8') as f:
-            json.dump(json_content, f, indent=4)
-    else:
-        data = load_tasks()
-        new_id = generate_id()
-        new_task["id"] = new_id
-        data.append(new_task)
-        save_tasks(data)
+
+    tasks = load_tasks()
+    new_id = max((task["id"] for task in tasks), default=0) + 1
+    new_task = {"id": new_id, "description": description, "status": status.value, "createdAt": current_date, "updatedAt": current_date}
+    tasks.append(new_task)
+    save_tasks(tasks)
     return f"You have added a new task with id {new_id}."
 
 def update(id: int, description: str) -> str:
     data = load_tasks()
     task_found = False
+    empty_description = validate_description(description)
+
+    if empty_description:
+        raise TaskError("Description cannot be empty.")
+    
     for task in data:
         if task["id"] == id:
             if description != task["description"]:
@@ -100,12 +108,16 @@ def list_tasks(status: Status) -> str:
         raise TaskError("No tasks have been found.")
     
     if status:
+        status_found = False
         for item in data:
             if item["status"] == status.value:
-                print(f"[{item['id']}] {item["status"]}: {item['description']}")
+                print(f"[{item['id']}] {item['status']}: {item['description']}")
+                status_found = True
+        if not status_found:
+            raise TaskError(f"No tasks with status {status.value} have been found.")
     else:
         for item in data:
-            print(f"[{item['id']}] {item["status"]}: {item['description']}")
+            print(f"[{item['id']}] {item['status']}: {item['description']}")
     return "All the tasks have been listed."
 
 def set_status(id: int, status: Status) -> str:
@@ -122,7 +134,7 @@ def set_status(id: int, status: Status) -> str:
                 raise TaskError(f"Task {id} already has status {status.value}.")
     if marked:
         save_tasks(data)
-        return f"Task with {id} marked as {status.value}."
+        return f"Task with id {id} marked as {status.value}."
     else:
         raise TaskError(f"Task with id {id} not found.")
 

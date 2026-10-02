@@ -4,7 +4,7 @@ import sys
 from .task_functions import Status, add, update, delete, list_tasks, mark_done, mark_in_progress, mark_todo, TaskError
 
 def cli():
-    global_parser = argparse.ArgumentParser(prog="task_cli")
+    global_parser = argparse.ArgumentParser()
     subparsers = global_parser.add_subparsers(
         title="subcommands", help="task management commands", dest="command"
     )
@@ -54,6 +54,6 @@ def cli():
     except TaskError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-    except json.JSONDecodeError as e:
+    except json.JSONDecodeError:
         print("Error: task file is corrupted.", file=sys.stderr)
         sys.exit(1)
