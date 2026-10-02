@@ -1,4 +1,3 @@
-import argparse
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -23,9 +22,10 @@ class Status(Enum):
         for item in cls:
             if item.value == normalized:
                 return item
-        raise argparse.ValueError(f"Invalid status value: '{value}'. Choose from: todo, in-progress, done")
+        raise ValueError(f"Invalid status value: '{value}'. Choose from: todo, in-progress, done")
 
 def load_tasks() -> list[dict]:
+    """Loads objects (tasks) from a JSON file."""
     if not os.path.exists(FILE_PATH):
         return []
     
@@ -42,18 +42,18 @@ def load_tasks() -> list[dict]:
     return tasks
 
 def save_tasks(tasks: list[dict]) -> None:
+    """Saves list of objects (tasks) into a JSON file."""
     with open(FILE_PATH, 'w', encoding='UTF-8') as f:
         json.dump({"tasks": tasks}, f, indent=4)
 
-def validate_description(description: str) -> bool:
-    if not description.strip():
-        return True
-    else:
-        return False
+def is_empty(description: str) -> bool:
+    """Returns true if given string (description) is empty."""
+    return not description.strip()
 
 def add(description: str, status: Status) -> str:
+    """Creates a new JSON file if does not exist and appends a new task into it."""
     current_date = datetime.now().isoformat()
-    empty_description = validate_description(description)
+    empty_description = is_empty(description)
 
     if empty_description:
         raise TaskError("Task description cannot be empty.")
@@ -65,16 +65,17 @@ def add(description: str, status: Status) -> str:
     save_tasks(tasks)
     return f"You have added a new task with id {new_id}."
 
-def update(id: int, description: str) -> str:
+def update(task_id: int, description: str) -> str:
+    """Updates a description of a task with given ID."""
     data = load_tasks()
     task_found = False
-    empty_description = validate_description(description)
+    empty_description = is_empty(description)
 
     if empty_description:
-        raise TaskError("Description cannot be empty.")
+        raise TaskError("Task description cannot be empty.")
     
     for task in data:
-        if task["id"] == id:
+        if task["id"] == task_id:
             if description != task["description"]:
                 task["description"] = description
                 task["updatedAt"] = datetime.now().isoformat()
@@ -84,65 +85,56 @@ def update(id: int, description: str) -> str:
                 raise TaskError("There are no changes detected in the description. Update unsuccessful.")
 
     if not task_found:
-        raise TaskError(f"Task with id {id} not found.")
+        raise TaskError(f"Task with id {task_id} not found.")
 
     save_tasks(data)
-    return f"Task {id} updated successfully."
+    return f"Task {task_id} updated successfully."
 
-def delete(id: int) -> str:
+def delete(task_id: int) -> str:
+    """Deletes task with given ID."""
     tasks = load_tasks()
-    updated_tasks = [task for task in tasks if task["id"] != id]
+    updated_tasks = [task for task in tasks if task["id"] != task_id]
 
     if len(tasks) == len(updated_tasks):
-        raise TaskError(f"Task with id {id} not found.")
+        raise TaskError(f"Task with id {task_id} not found.")
 
-    tasks = updated_tasks
-    save_tasks(tasks)
+    save_tasks(updated_tasks)
 
-    return f"Task {id} successfully deleted."
+    return f"Task {task_id} successfully deleted."
 
-def list_tasks(status: Status) -> str:
-    data = load_tasks()
-
-    if len(data) == 0:
-        raise TaskError("No tasks have been found.")
-    
+def list_tasks(status: Status | None) -> list[str]:
+    """Lists all tasks or lists tasks with given status if provided."""
+    tasks = load_tasks()
     if status:
-        status_found = False
-        for item in data:
-            if item["status"] == status.value:
-                print(f"[{item['id']}] {item['status']}: {item['description']}")
-                status_found = True
-        if not status_found:
-            raise TaskError(f"No tasks with status {status.value} have been found.")
-    else:
-        for item in data:
-            print(f"[{item['id']}] {item['status']}: {item['description']}")
-    return "All the tasks have been listed."
+        tasks = [task for task in tasks if task["status"] == status.value]
+    if not tasks:
+        raise TaskError("No tasks have been found.")
+    return [f"[{task['id']}] {task['status']}: {task['description']}" for task in tasks]
 
-def set_status(id: int, status: Status) -> str:
+def set_status(task_id: int, status: Status) -> str:
+    """Changes status of a task with given ID."""
     marked = False
     data = load_tasks()
     for item in data:
-        if item["id"] == id:
+        if item["id"] == task_id:
             if item["status"] != status.value:
                 item["status"] = status.value
                 item["updatedAt"] = datetime.now().isoformat()
                 marked = True
                 break
             else:
-                raise TaskError(f"Task {id} already has status {status.value}.")
+                raise TaskError(f"Task {task_id} already has status {status.value}.")
     if marked:
         save_tasks(data)
-        return f"Task with id {id} marked as {status.value}."
+        return f"Task with id {task_id} marked as {status.value}."
     else:
-        raise TaskError(f"Task with id {id} not found.")
+        raise TaskError(f"Task with id {task_id} not found.")
 
-def mark_in_progress(id: int) -> str:
-    return set_status(id, Status.IN_PROGRESS)
+def mark_in_progress(task_id: int) -> str:
+    return set_status(task_id, Status.IN_PROGRESS)
 
-def mark_done(id: int) -> str:
-    return set_status(id, Status.DONE)
+def mark_done(task_id: int) -> str:
+    return set_status(task_id, Status.DONE)
 
-def mark_todo(id: int) -> str:
-    return set_status(id, Status.TODO)
+def mark_todo(task_id: int) -> str:
+    return set_status(task_id, Status.TODO)

@@ -68,12 +68,10 @@ Run `tasks --help` or `tasks <command> --help` to see all options.
 ### Example session
 
 ```text
-$ tasks add "Buy groceries"
+$ tasks add "Buy groceries" done
 You have added a new task with id 1.
 $ tasks add "Cook dinner"
 You have added a new task with id 2.
-$ tasks mark-done 1
-Task with 1 marked as done.
 $ tasks list
 [1] done: Buy groceries
 [2] todo: Cook dinner
